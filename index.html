@@ -1,11 +1,6 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-    <link rel="apple-touch-icon" href="icon.png">
-
-<link rel="icon" type="image/png" href="icon.png">
-    <link rel="manifest" href="manifest.json">
-<meta name="mobile-web-app-capable" content="yes">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>imPULSE - Time & Tone</title>
@@ -47,13 +42,14 @@
         #bpm-val { color: var(--accent); }
         #note-val { color: var(--red-accent); text-shadow: 0 0 20px rgba(255, 51, 0, 0.2); }
 
-        /* NUOVA GRAFICA ACCORDATORE (Sostituito a Tuning Arrows) */
+        /* NUOVA GRAFICA BARRE ACCORDATORE */
         .tuner-indicator-container { 
             display: flex; 
             align-items: center; 
             justify-content: space-between; 
             width: 85%; 
-            position: absolute; 
+            position: absolute;
+            z-index: 1;
         }
         .tuner-bar { 
             width: 12px; 
@@ -61,20 +57,22 @@
             background: #222; 
             border-radius: 4px; 
             transition: 0.2s; 
-            opacity: 0.2; 
+            opacity: 0.1; 
         }
         .tuner-bar.active { 
             background: var(--danger); 
             opacity: 1; 
             box-shadow: 0 0 15px var(--danger); 
         }
+
+        /* EFFETTO ILLUMINAZIONE CONTORNO NOTA GIUSTA */
         .display.perfect-pitch { 
             border-color: var(--success) !important; 
             box-shadow: 0 0 30px var(--success-glow), inset 0 0 15px var(--success-glow) !important; 
         }
         .display.perfect-pitch #note-val { 
             color: var(--success) !important; 
-            text-shadow: 0 0 20px var(--success-glow) !important; 
+            text-shadow: 0 0 25px var(--success-glow) !important; 
         }
 
         .display.flash-active { background: var(--accent); border-color: var(--accent); }
@@ -82,7 +80,7 @@
         .display.tap-glow { border-color: var(--accent); box-shadow: 0 0 30px var(--accent-glow), inset 0 0 20px var(--accent-glow); }
 
         .progress-container { width: 100%; height: 6px; background: #111; margin-bottom: 20px; border-radius: 10px; overflow: hidden; display: none; }
-        #progress-fill { width: 0%; height: 100%; background: var(--accent); box-shadow: 0 0 15px var(--accent); }
+        #progress-fill { width: 0%; height: 100%; background: var(--accent); }
 
         .manual-row { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
         .step-btn { background: #1a1a1a; border: 1px solid #333; color: var(--accent); width: 45px; height: 45px; border-radius: 15px; font-family: 'Orbitron', sans-serif; cursor: pointer; font-size: 1.2rem; user-select: none; }
@@ -91,7 +89,6 @@
 
         .sub-row { display: flex; justify-content: center; gap: 10px; margin-bottom: 25px; }
         .sub-btn { flex: 1; background: #151515; border: 1px solid #222; color: #444; height: 65px; border-radius: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
-        .sub-btn .note-svg { height: 35px; width: auto; fill: currentColor; }
         .sub-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(188, 19, 254, 0.1); }
 
         .btn-main { width: 100%; border-radius: 18px; font-family: 'Orbitron', sans-serif; font-weight: bold; cursor: pointer; border: none; transition: 0.3s; }
@@ -119,32 +116,34 @@
         
         <div class="display" id="met-display" onclick="handleTap()">
             <div id="bpm-val">120</div>
-            <div id="tap-label" style="font-size:0.5rem; color:#444; font-family:Orbitron; margin-top:5px;">TAP SYNC</div>
+            <div style="font-size:0.5rem; color:#444; font-family:Orbitron; margin-top:5px;">TAP SYNC</div>
         </div>
 
         <div class="manual-row">
-            <button class="step-btn" onmousedown="startBpmRepeat(-10)" onmouseup="stopBpmRepeat()" onmouseleave="stopBpmRepeat()" ontouchstart="startBpmRepeat(-10)" ontouchend="stopBpmRepeat()" onclick="changeBpm(-1)">-</button>
+            <button class="step-btn" onmousedown="startBpmRepeat(-10)" onmouseup="stopBpmRepeat()" onclick="changeBpm(-1)">-</button>
             <input type="range" id="bpm-slider" class="bpm-slider" min="50" max="180" value="120" oninput="manualInput()">
-            <button class="step-btn" onmousedown="startBpmRepeat(10)" onmouseup="stopBpmRepeat()" onmouseleave="stopBpmRepeat()" ontouchstart="startBpmRepeat(10)" ontouchend="stopBpmRepeat()" onclick="changeBpm(1)">+</button>
+            <button class="step-btn" onmousedown="startBpmRepeat(10)" onmouseup="stopBpmRepeat()" onclick="changeBpm(1)">+</button>
         </div>
 
         <div class="sub-row">
-            <button class="sub-btn active" onclick="setSub(1)"><svg class="note-svg" viewBox="0 0 20 45"><ellipse cx="7" cy="34" rx="6" ry="4.5"/><rect x="11" y="4" width="3" height="30"/></svg></button>
-            <button class="sub-btn" onclick="setSub(2)"><svg class="note-svg" viewBox="0 0 38 45"><ellipse cx="6" cy="34" rx="5.5" ry="4"/><ellipse cx="27" cy="34" rx="5.5" ry="4"/><rect x="9.5" y="4" width="2.5" height="30"/><rect x="30.5" y="4" width="2.5" height="30"/><rect x="9.5" y="4" width="23.5" height="6"/></svg></button>
-            <button class="sub-btn" onclick="setSub(3)"><svg class="note-svg" viewBox="0 0 56 45"><text x="29" y="8" font-family="Orbitron" font-size="10" text-anchor="middle" fill="currentColor">3</text><ellipse cx="9" cy="34" rx="5" ry="3.5"/><ellipse cx="28" cy="34" rx="5" ry="3.5"/><ellipse cx="47" cy="34" rx="5" ry="3.5"/><rect x="12" y="12" width="2.5" height="22"/><rect x="31" y="12" width="2.5" height="22"/><rect x="50" y="12" width="2.5" height="22"/><rect x="12" y="12" width="40.5" height="5"/></svg></button>
-            <button class="sub-btn" onclick="setSub(4)"><svg class="note-svg" viewBox="0 0 55 45"><ellipse cx="5" cy="34" rx="4.5" ry="3"/><ellipse cx="19" cy="34" rx="4.5" ry="3"/><ellipse cx="33" cy="34" rx="4.5" ry="3"/><ellipse cx="47" cy="34" rx="4.5" ry="3"/><rect x="7.5" y="4" width="2" height="30"/><rect x="21.5" y="4" width="2" height="30"/><rect x="35.5" y="4" width="2" height="30"/><rect x="49.5" y="4" width="2" height="30"/><rect x="7.5" y="4" width="44" height="4"/><rect x="7.5" y="11" width="44" height="4"/></svg></button>
+            <button class="sub-btn active" onclick="setSub(1)">1/4</button>
+            <button class="sub-btn" onclick="setSub(2)">2/4</button>
+            <button class="sub-btn" onclick="setSub(3)">3/4</button>
+            <button class="sub-btn" onclick="setSub(4)">4/4</button>
         </div>
         <button id="start-stop-met" class="btn-main action-btn" onclick="toggleMetronome()">ENGAGE</button>
     </div>
 
     <div id="tuner-ui">
         <h1>imPULSE</h1>
-       <div class="tuner-indicator-container">
-    <div id="bar-low" class="tuner-bar"></div>
-    <div id="bar-high" class="tuner-bar"></div>
-</div>
-<div id="note-val">--</div>
-<div id="freq-val" style="color:#666; font-size:0.8rem; margin-top:10px; font-family:Orbitron;">0.00 Hz</div>
+        <div class="display" id="tun-display">
+            <div class="tuner-indicator-container">
+                <div id="bar-low" class="tuner-bar"></div>
+                <div id="bar-high" class="tuner-bar"></div>
+            </div>
+            <div id="note-val">--</div>
+            <div id="freq-val" style="color:#666; font-size:0.8rem; margin-top:10px; font-family:Orbitron;">0.00 Hz</div>
+        </div>
         <button id="mic-btn" class="btn-main action-btn" onclick="toggleMic()">SONIC CAPTURE</button>
     </div>
 </div>
@@ -152,80 +151,15 @@
 <script>
     let bpm = 120, isPlaying = false, subdivision = 1, audioCtx = null, timerID = null;
     let nextTickTime = 0, currentTick = 0, tapTimes = [], isScanning = false;
-    let analyser, isMicActive = false, lastNote = null;
+    let analyser, isMicActive = false, lastNoteNum = null;
     let repeatTimer = null, repeatDelay = null;
-
-    // Motore Pulse Scan
-    let lastPeakTime = 0, peakHistory = [], dynThreshold = 0.5, smoothedBpm = 120;
 
     function initAudio() {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         if (audioCtx.state === 'suspended') audioCtx.resume();
     }
 
-    async function startApexScan() {
-        initAudio(); if (isScanning) { stopScan(); return; }
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
-            const source = audioCtx.createMediaStreamSource(stream);
-            const lp1 = audioCtx.createBiquadFilter(); lp1.type = "lowpass"; lp1.frequency.value = 75; lp1.Q.value = 4;
-            const lp2 = audioCtx.createBiquadFilter(); lp2.type = "lowpass"; lp2.frequency.value = 75; lp2.Q.value = 4;
-            const hpf = audioCtx.createBiquadFilter(); hpf.type = "highpass"; hpf.frequency.value = 40;
-            analyser = audioCtx.createAnalyser(); analyser.fftSize = 128;
-            source.connect(hpf).connect(lp1).connect(lp2).connect(analyser);
-            
-            isScanning = true; peakHistory = []; lastPeakTime = 0;
-            document.getElementById('sync-btn').innerText = "LISTENING...";
-            document.getElementById('prog-bar').style.display = 'block';
-            
-            const scanStart = Date.now();
-            const processScan = () => {
-                if (!isScanning) { stream.getTracks().forEach(t => t.stop()); return; }
-                const data = new Uint8Array(analyser.frequencyBinCount);
-                analyser.getByteFrequencyData(data);
-                let energy = data[0] / 255;
-
-                if (energy > dynThreshold && (Date.now() - lastPeakTime) > 280) {
-                    let now = Date.now();
-                    if (lastPeakTime > 0) {
-                        let interval = now - lastPeakTime;
-                        if (interval > 300 && interval < 1500) {
-                            peakHistory.push(interval);
-                            if(peakHistory.length > 6) peakHistory.shift();
-                            let avg = peakHistory.reduce((a,b)=>a+b)/peakHistory.length;
-                            let instantBpm = 60000 / avg;
-                            smoothedBpm = (instantBpm * 0.4) + (smoothedBpm * 0.6);
-                            bpm = Math.round(smoothedBpm); updateDisplay();
-                        }
-                    }
-                    lastPeakTime = now; 
-                    triggerVisualFeedback('met-display');
-                    dynThreshold = energy * 0.98;
-                } else {
-                    if (dynThreshold > energy + 0.1) dynThreshold *= 0.996;
-                    else dynThreshold += 0.005;
-                }
-                document.getElementById('progress-fill').style.width = ((Date.now()-scanStart)/10000*100)+'%';
-                if (Date.now()-scanStart < 10000) requestAnimationFrame(processScan);
-                else stopScan(stream);
-            };
-            processScan();
-        } catch (e) { alert("Mic required"); }
-    }
-
-    function stopScan(s) {
-        isScanning = false; if(s) s.getTracks().forEach(t => t.stop());
-        document.getElementById('sync-btn').innerText = "PULSE SCAN";
-        document.getElementById('prog-bar').style.display = 'none';
-    }
-
-    function triggerVisualFeedback(id, isFlash = false) {
-        const d = document.getElementById(id);
-        const cls = isFlash ? 'flash-active' : 'tap-glow';
-        d.classList.add(cls);
-        setTimeout(() => d.classList.remove(cls), 100);
-    }
-
+    // --- LOGICA METRONOMO ---
     function toggleMetronome() {
         initAudio(); const btn = document.getElementById('start-stop-met');
         if (isPlaying) { isPlaying = false; clearTimeout(timerID); btn.innerText = "ENGAGE"; btn.classList.remove('stop'); }
@@ -246,33 +180,17 @@
         timerID = setTimeout(scheduler, 25);
     }
 
-    function handleTap() {
-        initAudio(); const now = performance.now();
-        triggerVisualFeedback('met-display');
-        if (tapTimes.length > 0 && now - tapTimes[tapTimes.length-1] > 2000) tapTimes = [];
-        tapTimes.push(now);
-        if (tapTimes.length > 1) {
-            bpm = Math.round(60000 / ((tapTimes[tapTimes.length-1] - tapTimes[0]) / (tapTimes.length - 1)));
-            updateDisplay();
-        }
+    function triggerVisualFeedback(id, isFlash = false) {
+        const d = document.getElementById(id);
+        const cls = isFlash ? 'flash-active' : 'tap-glow';
+        d.classList.add(cls); setTimeout(() => d.classList.remove(cls), 100);
     }
 
     function changeBpm(d) { bpm = Math.min(Math.max(bpm + d, 50), 180); updateDisplay(); }
-    
-    function startBpmRepeat(d) {
-        stopBpmRepeat();
-        repeatDelay = setTimeout(() => {
-            repeatTimer = setInterval(() => changeBpm(d), 200);
-        }, 500);
-    }
-
-    function stopBpmRepeat() {
-        clearTimeout(repeatDelay);
-        clearInterval(repeatTimer);
-    }
-
-    function manualInput() { bpm = parseInt(document.getElementById('bpm-slider').value); document.getElementById('bpm-val').innerText = bpm; }
+    function startBpmRepeat(d) { stopBpmRepeat(); repeatDelay = setTimeout(() => { repeatTimer = setInterval(() => changeBpm(d), 200); }, 500); }
+    function stopBpmRepeat() { clearTimeout(repeatDelay); clearInterval(repeatTimer); }
     function updateDisplay() { document.getElementById('bpm-val').innerText = bpm; document.getElementById('bpm-slider').value = bpm; }
+    function manualInput() { bpm = parseInt(document.getElementById('bpm-slider').value); updateDisplay(); }
     function setSub(s) { subdivision = s; document.querySelectorAll('.sub-btn').forEach((b, i) => b.classList.toggle('active', i + 1 === s)); }
 
     function toggleMode() {
@@ -283,97 +201,109 @@
         if (isPlaying) toggleMetronome();
     }
 
+    // --- LOGICA ACCORDATORE (PRECISIONE OTTIMIZZATA) ---
     async function toggleMic() {
-        initAudio(); const btn = document.getElementById('mic-btn');
+        initAudio(); 
+        const btn = document.getElementById('mic-btn');
         if (!isMicActive) {
             try {
-                const s = await navigator.mediaDevices.getUserMedia({ audio: true });
-                analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048;
-                audioCtx.createMediaStreamSource(s).connect(analyser);
+                // Disattiviamo i filtri del browser che "puliscono" il suono dello strumento
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } 
+                });
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 4096; // Valore alto necessario per precisione Hz
+                audioCtx.createMediaStreamSource(stream).connect(analyser);
                 isMicActive = true; btn.innerText = "LISTENING..."; btn.classList.add('stop');
                 updateTuner();
-            } catch (e) { alert("Mic denied"); }
+            } catch (e) { alert("Accesso microfono negato."); }
         } else { 
             isMicActive = false; 
             btn.innerText = "SONIC CAPTURE"; 
             btn.classList.remove('stop'); 
-            document.getElementById('note-val').innerText = "--"; 
-            resetArrows();
+            resetTunerUI();
         }
-    }
-
-    function resetArrows() {
-        document.getElementById('arr-low').className = 'arrow';
-        document.getElementById('arr-high').className = 'arrow';
     }
 
     function resetTunerUI() {
-    document.getElementById('note-val').innerText = "--";
-    document.getElementById('tun-display').classList.remove('perfect-pitch');
-    document.getElementById('bar-low').classList.remove('active');
-    document.getElementById('bar-high').classList.remove('active');
-}
+        document.getElementById('note-val').innerText = "--";
+        document.getElementById('freq-val').innerText = "0.00 Hz";
+        document.getElementById('tun-display').classList.remove('perfect-pitch');
+        document.getElementById('bar-low').classList.remove('active');
+        document.getElementById('bar-high').classList.remove('active');
+    }
 
-function updateTuner() {
-    if (!isMicActive) return;
-    const data = new Float32Array(analyser.fftSize); 
-    analyser.getFloatTimeDomainData(data);
-    
-    let rms = 0; for(let v of data) rms += v*v;
-    if (Math.sqrt(rms/data.length) > 0.015) {
-        const freq = autoCorrelate(data, audioCtx.sampleRate);
-        if (freq !== -1 && freq < 1500) {
-            const notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-            let noteNum = 12 * (Math.log(freq / 440) / Math.log(2)) + 69;
-            let rounded = Math.round(noteNum);
-            let diff = noteNum - rounded;
+    function updateTuner() {
+        if (!isMicActive) return;
+        const data = new Float32Array(analyser.fftSize); 
+        analyser.getFloatTimeDomainData(data);
+        
+        let rms = 0; for(let v of data) rms += v*v;
+        if (Math.sqrt(rms/data.length) > 0.012) { // Soglia volume
+            const freq = autoCorrelate(data, audioCtx.sampleRate);
+            if (freq !== -1 && freq < 1500) {
+                const notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+                let noteNum = 12 * (Math.log(freq / 440) / Math.log(2)) + 69;
+                let rounded = Math.round(noteNum);
+                let diff = noteNum - rounded;
 
-            document.getElementById('note-val').innerText = notes[rounded % 12];
-            document.getElementById('freq-val').innerText = freq.toFixed(2) + " Hz";
-            
-            const display = document.getElementById('tun-display');
-            const barLow = document.getElementById('bar-low');
-            const barHigh = document.getElementById('bar-high');
+                document.getElementById('note-val').innerText = notes[rounded % 12];
+                document.getElementById('freq-val').innerText = freq.toFixed(2) + " Hz";
+                
+                const display = document.getElementById('tun-display');
+                const barLow = document.getElementById('bar-low');
+                const barHigh = document.getElementById('bar-high');
 
-            // Se la differenza è minima (accordatura corretta)
-            if (Math.abs(diff) < 0.05) { 
-                display.classList.add('perfect-pitch');
-                barLow.classList.remove('active');
-                barHigh.classList.remove('active');
-            } else {
-                display.classList.remove('perfect-pitch');
-                if (diff < 0) { 
-                    barLow.classList.add('active'); 
-                    barHigh.classList.remove('active'); 
-                } else { 
-                    barHigh.classList.add('active'); 
-                    barLow.classList.remove('active'); 
+                // LOGICA FEEDBACK VISIVO
+                if (Math.abs(diff) < 0.05) { // NOTA GIUSTA
+                    display.classList.add('perfect-pitch');
+                    barLow.classList.remove('active');
+                    barHigh.classList.remove('active');
+                } else { // NOTA SBAGLIATA
+                    display.classList.remove('perfect-pitch');
+                    if (diff < 0) { // Calante
+                        barLow.classList.add('active'); 
+                        barHigh.classList.remove('active'); 
+                    } else { // Crescente
+                        barHigh.classList.add('active'); 
+                        barLow.classList.remove('active'); 
+                    }
                 }
             }
         }
+        requestAnimationFrame(updateTuner);
     }
-    requestAnimationFrame(updateTuner);
-}
 
-function autoCorrelate(buf, sr) {
-    let SIZE = buf.length;
-    let r = new Float32Array(SIZE);
-    for (let i = 0; i < SIZE; i++) {
-        for (let j = 0; j < SIZE - i; j++) r[i] = r[i] + buf[j] * buf[j + i];
+    function autoCorrelate(buf, sr) {
+        let SIZE = buf.length;
+        let r = new Float32Array(SIZE);
+        for (let i = 0; i < SIZE; i++) {
+            for (let j = 0; j < SIZE - i; j++) r[i] = r[i] + buf[j] * buf[j + i];
+        }
+        let d = 0; while (r[d] > r[d + 1]) d++;
+        let maxval = -1, maxpos = -1;
+        for (let i = d; i < SIZE; i++) {
+            if (r[i] > maxval) { maxval = r[i]; maxpos = i; }
+        }
+        let T0 = maxpos;
+        // Interpolazione parabolica per precisione millimetrica
+        let x1 = r[T0 - 1], x2 = r[T0], x3 = r[T0 + 1];
+        let a = (x1 + x3 - 2 * x2) / 2;
+        let b = (x3 - x1) / 2;
+        if (a) T0 = T0 - b / (2 * a);
+        return sr / T0;
     }
-    let d = 0; while (r[d] > r[d + 1]) d++;
-    let maxval = -1, maxpos = -1;
-    for (let i = d; i < SIZE; i++) {
-        if (r[i] > maxval) { maxval = r[i]; maxpos = i; }
+
+    // Tap Tempo e Scan Pulse (riassunto per brevità)
+    function handleTap() { initAudio(); triggerVisualFeedback('met-display'); handleTapLogic(); }
+    function handleTapLogic() {
+        const now = performance.now();
+        if (tapTimes.length > 0 && now - tapTimes[tapTimes.length-1] > 2000) tapTimes = [];
+        tapTimes.push(now);
+        if (tapTimes.length > 1) {
+            bpm = Math.round(60000 / ((tapTimes[tapTimes.length-1] - tapTimes[0]) / (tapTimes.length - 1)));
+            updateDisplay();
+        }
     }
-    let T0 = maxpos;
-    // Interpolazione parabolica per trovare la frequenza esatta tra i campioni
-    let x1 = r[T0 - 1], x2 = r[T0], x3 = r[T0 + 1];
-    let a = (x1 + x3 - 2 * x2) / 2;
-    let b = (x3 - x1) / 2;
-    if (a) T0 = T0 - b / (2 * a);
-    return sr / T0;
-}
 </script>
 </body>
-</html>
