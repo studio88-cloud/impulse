@@ -127,7 +127,7 @@
 <script>
     let bpm = 120, isPlaying = false, subdivision = 1, audioCtx = null, timerID = null;
     let nextTickTime = 0, currentTick = 0, tapTimes = [], isScanning = false;
-    let analyser, isMicActive = false;
+    let analyser, isMicActive = false; micStream = null;
     let repeatTimer = null, repeatDelay = null;
     let lastPeakTime = 0, peakHistory = [], dynThreshold = 0.5, smoothedBpm = 120;
 
@@ -198,18 +198,36 @@
     }
 
     // --- TUNER ---
-    async function toggleMic() {
-        initAudio(); 
-        if (!isMicActive) {
-            try {
-                const s = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false } });
-                analyser = audioCtx.createAnalyser(); analyser.fftSize = 4096;
-                audioCtx.createMediaStreamSource(s).connect(analyser);
-                isMicActive = true; document.getElementById('mic-btn').innerText = "LISTENING...";
-                updateTuner();
-            } catch (e) { alert("Mic error"); }
-        } else { isMicActive = false; document.getElementById('mic-btn').innerText = "SONIC CAPTURE"; resetTunerUI(); }
+   async function toggleMic() {
+    initAudio(); 
+    const btn = document.getElementById('mic-btn');
+    if (!isMicActive) {
+        try {
+            // Salviamo lo stream nella variabile globale
+            micStream = await navigator.mediaDevices.getUserMedia({ 
+                audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } 
+            });
+            analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 4096;
+            const source = audioCtx.createMediaStreamSource(micStream);
+            source.connect(analyser);
+            isMicActive = true; 
+            btn.innerText = "LISTENING..."; 
+            btn.classList.add('stop');
+            updateTuner();
+        } catch (e) { alert("Mic error"); }
+    } else { 
+        // SPEGNIMENTO AUTOMATICO
+        isMicActive = false; 
+        if (micStream) {
+            micStream.getTracks().forEach(track => track.stop()); // Spegne fisicamente il microfono
+            micStream = null;
+        }
+        btn.innerText = "SONIC CAPTURE"; 
+        btn.classList.remove('stop'); 
+        resetTunerUI(); 
     }
+}
 
     function updateTuner() {
         if (!isMicActive) return;
@@ -283,13 +301,19 @@
     function updateDisplay() { document.getElementById('bpm-val').innerText = bpm; document.getElementById('bpm-slider').value = bpm; }
     function manualInput() { bpm = parseInt(document.getElementById('bpm-slider').value); document.getElementById('bpm-val').innerText = bpm; }
     function setSub(s) { subdivision = s; document.querySelectorAll('.sub-btn').forEach((b, i) => b.classList.toggle('active', i+1 === s)); }
-    function toggleMode() {
-        const tone = document.getElementById('mode-toggle').checked;
-        document.body.classList.toggle('tune-mode', tone);
-        document.getElementById('metronome-ui').classList.toggle('active', !tone);
-        document.getElementById('tuner-ui').classList.toggle('active', tone);
-        if (isPlaying) toggleMetronome();
+ function toggleMode() {
+    const tone = document.getElementById('mode-toggle').checked;
+    document.body.classList.toggle('tune-mode', tone);
+    document.getElementById('metronome-ui').classList.toggle('active', !tone);
+    document.getElementById('tuner-ui').classList.toggle('active', tone);
+    
+    if (isPlaying) toggleMetronome();
+
+    // Se passi al metronomo e il microfono è ancora acceso, lo spegne
+    if (!tone && isMicActive) {
+        toggleMic();
     }
+}
 </script>
 </body>
 </html>
