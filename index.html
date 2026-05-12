@@ -15,7 +15,7 @@
             --bg: #050505; --card: #121212; --accent: #bc13fe; 
             --accent-glow: rgba(188, 19, 254, 0.5); --text: #f0f0f0;
             --danger: #ff0055; --red-accent: #ff3300;
-            --success: #00ff88;
+            --success: #00ff88; --success-glow: rgba(0, 255, 136, 0.4);
         }
         .tune-mode { --accent: var(--red-accent); --accent-glow: rgba(255, 51, 0, 0.4); }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
@@ -40,19 +40,42 @@
             background: #000; width: 100%; aspect-ratio: 1; max-height: 25vh; 
             margin: 15px 0; border-radius: 35px; border: 2px solid #1a1a1a; 
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            transition: 0.1s ease-out; position: relative; overflow: hidden;
+            transition: 0.2s ease; position: relative; overflow: hidden;
         }
         
         #bpm-val, #note-val { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 5.8rem; line-height: 1; z-index: 5; transition: 0.08s; }
         #bpm-val { color: var(--accent); }
-        #note-val { color: var(--red-accent); text-shadow: 0 0 20px rgba(255, 51, 0, 0.3); }
+        #note-val { color: var(--red-accent); text-shadow: 0 0 20px rgba(255, 51, 0, 0.2); }
 
-        /* Tuning Arrows */
-        .tuner-arrows { display: flex; justify-content: space-between; width: 80%; margin-top: 10px; opacity: 0.3; transition: 0.2s; }
-        .arrow { font-size: 2rem; color: var(--text); }
-        .arrow.active-low { color: var(--danger); opacity: 1; text-shadow: 0 0 10px var(--danger); }
-        .arrow.active-high { color: var(--danger); opacity: 1; text-shadow: 0 0 10px var(--danger); }
-        .arrow.perfect { color: var(--success) !important; opacity: 1 !important; text-shadow: 0 0 15px var(--success) !important; }
+        /* NUOVA GRAFICA ACCORDATORE (Sostituito a Tuning Arrows) */
+        .tuner-indicator-container { 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            width: 85%; 
+            position: absolute; 
+        }
+        .tuner-bar { 
+            width: 12px; 
+            height: 60px; 
+            background: #222; 
+            border-radius: 4px; 
+            transition: 0.2s; 
+            opacity: 0.2; 
+        }
+        .tuner-bar.active { 
+            background: var(--danger); 
+            opacity: 1; 
+            box-shadow: 0 0 15px var(--danger); 
+        }
+        .display.perfect-pitch { 
+            border-color: var(--success) !important; 
+            box-shadow: 0 0 30px var(--success-glow), inset 0 0 15px var(--success-glow) !important; 
+        }
+        .display.perfect-pitch #note-val { 
+            color: var(--success) !important; 
+            text-shadow: 0 0 20px var(--success-glow) !important; 
+        }
 
         .display.flash-active { background: var(--accent); border-color: var(--accent); }
         .display.flash-active #bpm-val { color: #000; }
@@ -116,14 +139,12 @@
 
     <div id="tuner-ui">
         <h1>imPULSE</h1>
-        <div class="display" id="tun-display">
-            <div id="note-val">--</div>
-            <div class="tuner-arrows">
-                <span id="arr-low" class="arrow">◀</span>
-                <span id="arr-high" class="arrow">▶</span>
-            </div>
-            <div id="freq-val" style="color:#666; font-size:0.8rem; margin-top:10px; font-family:Orbitron;">0.00 Hz</div>
-        </div>
+       <div class="tuner-indicator-container">
+    <div id="bar-low" class="tuner-bar"></div>
+    <div id="bar-high" class="tuner-bar"></div>
+</div>
+<div id="note-val">--</div>
+<div id="freq-val" style="color:#666; font-size:0.8rem; margin-top:10px; font-family:Orbitron;">0.00 Hz</div>
         <button id="mic-btn" class="btn-main action-btn" onclick="toggleMic()">SONIC CAPTURE</button>
     </div>
 </div>
@@ -286,52 +307,73 @@
         document.getElementById('arr-high').className = 'arrow';
     }
 
-    function updateTuner() {
-        if (!isMicActive) return;
-        const data = new Float32Array(analyser.fftSize); 
-        analyser.getFloatTimeDomainData(data);
-        
-        let rms = 0; for(let v of data) rms += v*v;
-        if (Math.sqrt(rms/data.length) > 0.01) {
-            const freq = autoCorrelate(data, audioCtx.sampleRate);
-            if (freq !== -1 && freq < 1500) {
-                const notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-                let noteNum = 12 * (Math.log(freq / 440) / Math.log(2)) + 69;
-                let rounded = Math.round(noteNum);
-                let diff = noteNum - rounded;
-                
-                document.getElementById('note-val').innerText = notes[rounded % 12];
-                document.getElementById('freq-val').innerText = freq.toFixed(2) + " Hz";
-                
-                const low = document.getElementById('arr-low');
-                const high = document.getElementById('arr-high');
-                resetArrows();
+    function resetTunerUI() {
+    document.getElementById('note-val').innerText = "--";
+    document.getElementById('tun-display').classList.remove('perfect-pitch');
+    document.getElementById('bar-low').classList.remove('active');
+    document.getElementById('bar-high').classList.remove('active');
+}
 
-                if (Math.abs(diff) < 0.03) {
-                    low.classList.add('perfect'); high.classList.add('perfect');
-                } else if (diff < 0) {
-                    low.classList.add('active-low');
-                } else {
-                    high.classList.add('active-high');
-                }
+function updateTuner() {
+    if (!isMicActive) return;
+    const data = new Float32Array(analyser.fftSize); 
+    analyser.getFloatTimeDomainData(data);
+    
+    let rms = 0; for(let v of data) rms += v*v;
+    if (Math.sqrt(rms/data.length) > 0.015) {
+        const freq = autoCorrelate(data, audioCtx.sampleRate);
+        if (freq !== -1 && freq < 1500) {
+            const notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+            let noteNum = 12 * (Math.log(freq / 440) / Math.log(2)) + 69;
+            let rounded = Math.round(noteNum);
+            let diff = noteNum - rounded;
 
-                if (rounded !== lastNote) {
-                    triggerVisualFeedback('tun-display');
-                    lastNote = rounded;
+            document.getElementById('note-val').innerText = notes[rounded % 12];
+            document.getElementById('freq-val').innerText = freq.toFixed(2) + " Hz";
+            
+            const display = document.getElementById('tun-display');
+            const barLow = document.getElementById('bar-low');
+            const barHigh = document.getElementById('bar-high');
+
+            // Se la differenza è minima (accordatura corretta)
+            if (Math.abs(diff) < 0.05) { 
+                display.classList.add('perfect-pitch');
+                barLow.classList.remove('active');
+                barHigh.classList.remove('active');
+            } else {
+                display.classList.remove('perfect-pitch');
+                if (diff < 0) { 
+                    barLow.classList.add('active'); 
+                    barHigh.classList.remove('active'); 
+                } else { 
+                    barHigh.classList.add('active'); 
+                    barLow.classList.remove('active'); 
                 }
             }
         }
-        requestAnimationFrame(updateTuner);
     }
+    requestAnimationFrame(updateTuner);
+}
 
-    function autoCorrelate(buf, sr) {
-        let c = new Float32Array(buf.length);
-        for (let i=0; i<buf.length; i++) for (let j=0; j<buf.length-i; j++) c[i] += buf[j]*buf[j+i];
-        let d=0; while (c[d]>c[d+1]) d++;
-        let maxv=-1, maxp=-1;
-        for (let i=d; i<buf.length; i++) if (c[i]>maxv) { maxv=c[i]; maxp=i; }
-        return maxp !== -1 ? sr/maxp : -1;
+function autoCorrelate(buf, sr) {
+    let SIZE = buf.length;
+    let r = new Float32Array(SIZE);
+    for (let i = 0; i < SIZE; i++) {
+        for (let j = 0; j < SIZE - i; j++) r[i] = r[i] + buf[j] * buf[j + i];
     }
+    let d = 0; while (r[d] > r[d + 1]) d++;
+    let maxval = -1, maxpos = -1;
+    for (let i = d; i < SIZE; i++) {
+        if (r[i] > maxval) { maxval = r[i]; maxpos = i; }
+    }
+    let T0 = maxpos;
+    // Interpolazione parabolica per trovare la frequenza esatta tra i campioni
+    let x1 = r[T0 - 1], x2 = r[T0], x3 = r[T0 + 1];
+    let a = (x1 + x3 - 2 * x2) / 2;
+    let b = (x3 - x1) / 2;
+    if (a) T0 = T0 - b / (2 * a);
+    return sr / T0;
+}
 </script>
 </body>
 </html>
